@@ -76,6 +76,16 @@ function ensureAdmin(req, res, next) {
   }
 }
 
+// Get user by username with getUser method 
+//in models/user.js to include the list of job IDs the user has applied for:
+router.get('/:username', ensureLoggedIn, async function(req, res, next) {
+  try {
+    const user = await User.getUser(req.params.username);
+    return res.json({ user });
+  } catch (err) {
+    return next(err);
+  }
+});
 
 /** GET /[username] => { user }
  *
@@ -145,6 +155,17 @@ router.delete("/:username", ensureLoggedIn, async function (req, res, next) {
     
     await User.remove(req.params.username);
     return res.json({ deleted: req.params.username });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+//
+router.post('/:username/jobs/:id', ensureJobOwnerOrAdmin, async (req, res, next) => {
+  try {
+    const { username, job_id } = req.params;
+    const result = await User.applyToJob(username, job_id);
+    return res.json(result);
   } catch (err) {
     return next(err);
   }

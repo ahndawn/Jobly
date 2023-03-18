@@ -11,6 +11,8 @@ const {
 
 const { BCRYPT_WORK_FACTOR } = require("../config.js");
 
+const Application = require('./applications');
+
 /** Related functions for users. */
 
 class User {
@@ -48,7 +50,12 @@ class User {
 
     throw new UnauthorizedError("Invalid username/password");
   }
-
+  
+  // allows user to apply to a job
+  static async applyToJob(username, job_id) {
+    const applications = await Application.create(username, job_id);
+    return { applied: applications.job_id };
+  }
   /** Register user with data.
    *
    * Returns { username, firstName, lastName, email, isAdmin }
@@ -123,22 +130,27 @@ class User {
    * Throws NotFoundError if user not found.
    **/
 
-  static async get(username) {
-    const userRes = await db.query(
-          `SELECT username,
-                  first_name AS "firstName",
-                  last_name AS "lastName",
-                  email,
-                  is_admin AS "isAdmin"
-           FROM users
-           WHERE username = $1`,
-        [username],
+  static async getUser(username) {
+    const result = await db.query(
+      `SELECT username, first_name, last_name, email, photo_url, is_admin
+        FROM users
+        WHERE username = $1`,
+      [username]
     );
-
-    const user = userRes.rows[0];
-
-    if (!user) throw new NotFoundError(`No user: ${username}`);
-
+  
+    const user = result.rows[0];
+  
+    const appliedJobsResult = await db.query(
+      `SELECT job_id
+        FROM applications
+        WHERE username = $1`,
+      [username]
+    );
+  
+    const appliedJobs = appliedJobsResult.rows.map(row => row.job_id);
+  
+    user.appliedJobs = appliedJobs;
+  
     return user;
   }
 

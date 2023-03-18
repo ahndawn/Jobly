@@ -1,5 +1,5 @@
 const db = require('../db');
-const Job = require('../models/job');
+const Job = require('./job.js');
 
 describe('Job', () => {
   beforeAll(async () => {

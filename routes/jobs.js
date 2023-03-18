@@ -5,7 +5,7 @@ const Job = require('../models/job');
 const { ensureLoggedIn, ensureAdmin, ensureJobOwnerOrAdmin } = require('../middleware/auth');
 
 // GET route to get list of all jobs
-router.get('/', ensureLoggedIn, async function(req, res, next) {
+router.get('/jobs', ensureLoggedIn, async function(req, res, next) {
   try {
     const jobs = await Job.getAll();
     return res.json({ jobs });
@@ -15,7 +15,7 @@ router.get('/', ensureLoggedIn, async function(req, res, next) {
 });
 
 // Create a new job (admins only)
-router.post('/', ensureAdmin, async (req, res, next) => {
+router.post('/jobs/new', ensureAdmin, async (req, res, next) => {
     try {
       const job = await Job.create(req.body);
       res.status(201).json({ job });
@@ -25,7 +25,7 @@ router.post('/', ensureAdmin, async (req, res, next) => {
   });
 
 // GET route to get a specific job by ID
-router.get('/:id', ensureLoggedIn, async function(req, res, next) {
+router.get('/jobs/:id', ensureLoggedIn, async function(req, res, next) {
   try {
     const job = await Job.getById(req.params.id);
     return res.json({ job });
@@ -35,7 +35,7 @@ router.get('/:id', ensureLoggedIn, async function(req, res, next) {
 });
 
 // Update a job (admins or job owner only)
-router.patch('/:id', ensureJobOwnerOrAdmin, async (req, res, next) => {
+router.patch('/jobs/update/:id', ensureJobOwnerOrAdmin, async (req, res, next) => {
     try {
       const job = await req.job.update(req.body);
       res.json({ job });
@@ -45,7 +45,7 @@ router.patch('/:id', ensureJobOwnerOrAdmin, async (req, res, next) => {
   });
 
 // Delete a job (admins or job owner only)
-router.delete('/:id', ensureJobOwnerOrAdmin, async (req, res, next) => {
+router.delete('jobs/delete/:id', ensureJobOwnerOrAdmin, async (req, res, next) => {
     try {
       await req.job.remove();
       res.json({ message: 'Job deleted' });
@@ -53,6 +53,64 @@ router.delete('/:id', ensureJobOwnerOrAdmin, async (req, res, next) => {
       next(err);
     }
   });
+
+// GET /jobs route with search by title
+router.get('/jobs/title', async function(req, res, next) {
+  try {
+    const { title } = req.query;
+
+    let jobs;
+    if (title) {
+      jobs = await Job.filterByTitle(title);
+    } else {
+      jobs = await Job.findAll();
+    }
+
+    return res.json({ jobs });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// GET /jobs by minimum
+router.get('/jobs/min-salary/:minSalary', async (req, res, next) => {
+  try {
+    const { minSalary } = req.query;
+    let query = `SELECT id, title, salary, equity, company_handle 
+                 FROM jobs`;
+
+    if (minSalary) {
+      query += ` WHERE salary >= $1`;
+    }
+
+    const result = await db.query(query, [minSalary]);
+    return res.json({ jobs: result.rows });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// filters by equity 
+router.get('/jobs/equity', async (req, res, next) => {
+  try {
+    const hasEquity = req.query.hasEquity === 'true';
+    let result;
+
+    if (hasEquity) {
+      result = await Job.findAll({
+        where: {
+          equity: { [Op.gt]: 0 }
+        }
+      });
+    } else {
+      result = await Job.findAll();
+    }
+
+    return res.json({ jobs: result });
+  } catch (err) {
+    return next(err);
+  }
+});
 
 // Export router
 module.exports = router;

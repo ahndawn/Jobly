@@ -1,8 +1,11 @@
+DROP TABLE IF EXISTS jobs;
+DROP TABLE IF EXISTS companies;
+
 CREATE TABLE companies (
   handle VARCHAR(25) PRIMARY KEY CHECK (handle = lower(handle)),
   name TEXT UNIQUE NOT NULL,
   num_employees INTEGER CHECK (num_employees >= 0),
-  description TEXT NOT NULL,
+  description TEXT,
   logo_url TEXT
 );
 
